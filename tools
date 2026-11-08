@@ -1,0 +1,4 @@
+# tk's list of feelkit's commands: name|group|what it does|program it needs
+k-bg|Kitty|background image, brightness, opacity, accent colours|kitty
+k-theme|Kitty|colour theme with live preview; Mine / All tabs|kitty
+k-icon|Kitty|kitty's app icon|kitty
