@@ -179,7 +179,8 @@ uninstall_kitty_centered() {
 # GNOME's window zoom animations make fast open/close windows (the rofi launcher) flash blurry.
 anim_schema=org.gnome.desktop.interface anim_key=enable-animations
 label_no_animations() { echo "No window animations"; }
-title_no_animations() { echo "Turn off GNOME's window animations (no blur flash when the launcher opens and closes fast)"; }
+title_no_animations() { echo "Turn off GNOME's window animations (browsers then drop CSS animations too: reduced motion)"; }
+off_no_animations() { :; }   # unticked by default: it also turns off animations in web pages
 detail_no_animations() { echo "GNOME setting $anim_schema $anim_key = false (your old value is kept for the uninstall)"; }
 state_no_animations() { NOTE=""
   command -v gsettings >/dev/null && gsettings list-keys "$anim_schema" 2>/dev/null | grep -qx "$anim_key" ||
