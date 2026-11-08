@@ -265,7 +265,7 @@ uninstall_vitals_icons() {
 # ---------------------------------------------------------- dash2dock ---
 # Dash2Dock Animated (GNOME extension, macOS-style dock) from extensions.gnome.org, with
 # the toolkit's patches (feelkit/gnome/dash2dock/dash2dock.patch, written against release 92):
-#  - a click on an app with several windows shows live window previews;
+#  - a click on an app with several windows shows live window previews (the app icon for a minimized window);
 #  - dragging an icon to reorder no longer flickers;
 #  - windows stop exactly at the dock (no extra gap); the dock panel catches the mouse.
 # Plus a preset look (feelkit/gnome/dash2dock/settings.dconf). Replaces Ubuntu's dock while it's on.
@@ -294,7 +294,7 @@ install_dash2dock() {
     patch -p1 -N -s -b -z .orig -d "$d2d_dir" <"$d2d_src/dash2dock.patch" >>"$log_file" 2>&1 &&
       ok "patched: window previews, calm drag, no gap (originals kept as *.orig)"
   else
-    warn "this Dash2Dock release ($(grep -o '"version": *[0-9]*' "$d2d_dir/metadata.json" | grep -o '[0-9]*$')) doesn't match our patches (written for 92): the dock works, but without them"
+    warn "this Dash2Dock release ($(grep -o '"version": *[0-9]*' "$d2d_dir/metadata.json" | grep -o '[0-9]*$')) doesn't match our patches (written for 92): the dock works, but without them (fk doctor shows which parts fail)"
   fi
   if ask "Use the toolkit's look for it (size, full-width panel, colours)? Your current settings are kept for the uninstall."; then
     mkdir -p "$orig_dir"

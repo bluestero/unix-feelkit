@@ -1,0 +1,53 @@
+#!/usr/bin/env bash
+# fk: feelkit's front door. `fk help` lists the commands.
+set -uo pipefail
+SELF="$(readlink -f "${BASH_SOURCE[0]}")"
+# the toolkit's folder: walk up from here (works inside the toolkit and as a layer in layers/)
+repo=$(cd "$(dirname "$SELF")/.." && pwd); until [[ -f $repo/lib/setup.sh || $repo == / ]]; do repo=$(dirname "$repo"); done
+mode=ask details=0
+# shellcheck source=../../../lib/setup.sh
+. "$repo/lib/setup.sh"
+# shellcheck source=../../../lib/components.sh
+. "$repo/lib/components.sh"
+ask() { confirm "$@"; }   # a picker, not a typed y/N (lib/ui.sh)
+
+# id|name shown|uuid|dconf path|preset|ignore regex|name the originals are kept under
+looks_table() {
+  printf '%s\n' \
+    "vitals|Vitals|$vt_uuid|$vt_path|$vt_file||$vt_uuid" \
+    "blur-my-shell|Blur my Shell|$bm_uuid|$bm_path|$bm_file||$bm_uuid" \
+    "rounded-corners|Rounded Window Corners|$rc_uuid|$rc_path|$rc_file||$rc_uuid" \
+    "dash-to-panel|Dash to Panel|$dtp_uuid|$dtp_path|$dtp_src/settings.dconf|$dtp_ignore|dash-to-panel"
+}
+
+cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension's settings
+  local want=${1:-} row id nice uuid path file ign name rows="" S=$'\x1f' pick
+  while IFS='|' read -r id nice uuid path file ign name; do
+    gx_present "$uuid" && gx_enabled "$uuid" || continue
+    [[ -z $want || $want == "$id" ]] || continue
+    rows+="$nice$S$id"$'\n'
+  done < <(looks_table)
+  [[ -n $rows ]] || die "no feelkit extension to adjust${want:+ called $want} · see: ./install.sh ls"
+  if [[ -n $want ]]; then pick=$want
+  else
+    pick=$(printf '%s' "$rows" | ui_fzf looks --delimiter="$S" --with-nth=1 --prompt='  ' \
+      --header='enter: choose · esc: close') || return 0
+    pick=${pick##*"$S"}
+  fi
+  row=$(looks_table | grep "^$pick|") || ui_unknown fk "$pick" extension
+  IFS='|' read -r id nice uuid path file ign name <<<"$row"
+  look_menu "$path" "$file" "$name" "$nice" "$ign"
+}
+
+case "${1:-help}" in
+  looks) shift; cmd_looks "$@" ;;
+  doctor) exec bash "$(dirname "$SELF")/../gnome/dash2dock/check-patch.sh" "${@:2}" ;;
+  help|-h|--help) ui_help fk "feelkit: the appearance parts" <<'HELP'
+## Commands
+fk looks [extension]	re-apply an extension's look, reset it, put your old settings back or undo the last change	Extensions: vitals, blur-my-shell, rounded-corners, dash-to-panel
+fk doctor [dir|zip]	try our Dash2Dock patch against the newest release (or a folder/zip), hunk by hunk
+fk help	this page
+HELP
+  ;;
+  *) ui_unknown fk "$1" command ;;
+esac

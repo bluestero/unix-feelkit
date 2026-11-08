@@ -78,7 +78,7 @@
                this._maybeMinimizeOrMaximize(c._appwell.app);
                c._appwell._activate();
              } catch (err) {
-@@ -1359,6 +1407,99 @@
+@@ -1359,6 +1407,101 @@
        });
      }
  
@@ -141,7 +141,7 @@
 +        let col = new St.BoxLayout({ vertical: true, style: 'spacing: 6px;' });
 +        let actor = w.get_compositor_private();
 +        let thumb = new St.Bin({ style: 'background-color: rgba(0,0,0,0.35); border-radius: 6px;' });
-+        if (actor) {
++        if (actor && !w.minimized) {
 +          let [aw, ah] = actor.get_size();
 +          let sc = aw > 0 ? Math.min(TW / aw, 150 / Math.max(ah, 1)) : 0.2;
 +          thumb.set_size(Math.max(Math.round(aw * sc), 40), Math.max(Math.round(ah * sc), 40));
@@ -151,7 +151,9 @@
 +          holder.add_child(clone);
 +          thumb.set_child(holder);
 +        } else {
++          // a minimized window has no picture to clone: show the app's icon instead
 +          thumb.set_size(TW, 100);
++          thumb.set_child(app.create_icon_texture(64));
 +        }
 +        col.add_child(thumb);
 +        let title = new St.Label({

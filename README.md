@@ -14,6 +14,10 @@ layer: everything that is only about looks, so the toolkit itself stays about wo
 
 The toolkit works without it: rofi and btop just keep their default colours.
 
+Dash to Panel and Dash2Dock both sit on the bottom edge of the screen, so installing both gives
+two bars on top of each other. Pick one (the installer leaves Dash2Dock unticked when the panel
+is already in); the other can be added or removed any time.
+
 ## Install
 
 You need the toolkit first (see its README), then:
@@ -29,13 +33,14 @@ tk layer add https://github.com/bluestero/unix-feelkit.git   # clones into layer
 
 ```
 components.sh     the installer components (kitty-bg, kitty-theme, ..., rounded-corners)
-bin/              k-bg, k-theme, k-icon, k-rofi
+bin/              k-bg, k-theme, k-icon, k-rofi, fk (`fk looks`, `fk doctor`)
 shell/            init.sh (loaded by every shell) and the tab-completion hooks
 tools             what `tk ls` shows for these commands
 backgrounds/      the images k-bg offers (licences in backgrounds/SOURCES.md)
 themes/           team themes for k-theme (yours go in ~/.config/kitty/themes)
 kitty-icons/      the kitty icon installer and cleanup
 gnome/            one folder per GNOME extension: the preset look (settings.dconf), patches
+                  (dash2dock/check-patch.sh tries the patch against the newest release: `fk doctor`)
 ```
 
 How a layer is laid out is described in the toolkit's README, under Layers.
