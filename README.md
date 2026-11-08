@@ -15,8 +15,8 @@ layer: everything that is only about looks, so the toolkit itself stays about wo
 The toolkit works without it: rofi and btop just keep their default colours.
 
 Dash to Panel and Dash2Dock both sit on the bottom edge of the screen, so installing both gives
-two bars on top of each other. Pick one (`fk install` leaves Dash2Dock unticked when the panel
-is already in, and asks once when both are ticked); the other can be added or removed any time.
+two bars on top of each other. Pick one (`fk install` asks once when both are
+ticked, or one is ticked and the other already in); the other can be added or removed any time.
 
 ## Install
 
@@ -54,7 +54,7 @@ What `fk install <part>` sets up, and what `fk uninstall <part>` puts back.
 | `vitals-icons` | Two SVGs in `feelkit/gnome/vitals-icons` (CPU chip with a solid core, RAM chip with pins) copied over the Vitals extension's `icons/original` icons, and its dropdown is centred under the pill (`menu-centered`, old value put back on uninstall); stock ones kept as `*.toolkit-orig` for the uninstall. An extension update restores the stock icons, so run it again after one |
 | `blur-my-shell` | Blur my Shell (GNOME extension) from extensions.gnome.org with an optional look from `feelkit/gnome/blur-my-shell/` (blurred overview in Liquid Glass and Alt+Tab, applications untouched). Same settings menu as `vitals`; log out once after installing |
 | `rounded-corners` | Rounded Window Corners Reborn (GNOME extension) from extensions.gnome.org with an optional look from `feelkit/gnome/rounded-window-corners/` (15 px, off for maximized and fullscreen windows). Same settings menu as `vitals`; log out once after installing |
-| `no-animations` | GNOME setting `org.gnome.desktop.interface enable-animations = false`: no window zoom animations (snappier, and no blurry flash when the rofi launcher opens and closes fast); unticked by default and asked with default No: browsers then reduce motion too (websites drop their CSS animations); old value put back on uninstall |
+| `no-animations` | GNOME setting `org.gnome.desktop.interface enable-animations = false`: no window zoom animations (snappier, and no blurry flash when the rofi launcher opens and closes fast); asked with default No: browsers then reduce motion too (websites drop their CSS animations); old value put back on uninstall |
 
 ## What's in the folder
 

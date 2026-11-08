@@ -16,9 +16,8 @@ group_vitals_icons() { echo "GNOME looks"; }; group_blur_my_shell() { echo "GNOM
 group_rounded_corners() { echo "GNOME looks"; }
 GROUP_ABOUT["Kitty looks"]="How kitty looks: background images, colour themes, accents from the background, app icons, centred windows."
 GROUP_ABOUT["GNOME looks"]="How GNOME looks: one bar or a dock, Vitals in the top bar, blur, rounded corners, no animations."
-# Dash2Dock and Dash to Panel both sit on the bottom edge: the dock starts unticked when the
-# panel is in, and with both ticked the summary asks once.
-off_dash2dock() { d2d_other_bar; }
+# Dash2Dock and Dash to Panel both sit on the bottom edge: with both ticked (or one ticked
+# and the other in already) the summary asks once.
 CLASHES+=("dash2dock dash-to-panel|Both bars use the same space. Keep both?")
 requires_kitty_bg() { echo apt; }; requires_kitty_icons() { echo apt; }
 requires_kitty_centered() { echo gnome; }; requires_dash2dock() { echo gnome; }
@@ -180,7 +179,6 @@ uninstall_kitty_centered() {
 anim_schema=org.gnome.desktop.interface anim_key=enable-animations
 label_no_animations() { echo "No window animations"; }
 title_no_animations() { echo "Turn off GNOME's window animations (browsers then drop CSS animations too: reduced motion)"; }
-off_no_animations() { :; }   # unticked by default: it also turns off animations in web pages
 detail_no_animations() { echo "GNOME setting $anim_schema $anim_key = false (your old value is kept for the uninstall)"; }
 state_no_animations() { NOTE=""
   command -v gsettings >/dev/null && gsettings list-keys "$anim_schema" 2>/dev/null | grep -qx "$anim_key" ||
