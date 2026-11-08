@@ -15,8 +15,8 @@ layer: everything that is only about looks, so the toolkit itself stays about wo
 The toolkit works without it: rofi and btop just keep their default colours.
 
 Dash to Panel and Dash2Dock both sit on the bottom edge of the screen, so installing both gives
-two bars on top of each other. Pick one (the installer leaves Dash2Dock unticked when the panel
-is already in); the other can be added or removed any time.
+two bars on top of each other. Pick one (`fk install` leaves Dash2Dock unticked when the panel
+is already in, and asks once when both are ticked); the other can be added or removed any time.
 
 ## Install
 
@@ -26,8 +26,16 @@ You need the toolkit first (see its README), then:
 tk layer add https://github.com/bluestero/unix-feelkit.git   # clones into layers/feelkit, offers to set it up
 ```
 
-`tk install --layer=feelkit` sets up just its parts later, `tk update` keeps it current, and
-`tk uninstall` shows its parts in the same checklist as the toolkit's. Everything asks first.
+feelkit is set up on its own (the file `standalone`), never by `tk install`:
+
+```bash
+fk install            # a tab each for Kitty looks and GNOME looks, then a summary; enter sets it up
+fk install kitty-theme   # just that part (fk install ls lists them)
+fk uninstall          # remove parts, your own settings put back
+```
+
+`tk update` keeps it current (and says when `fk install` has something new), `tk status` and
+`tk doctor` show one line on how much of it is set up. Everything asks first.
 
 ## What's in the folder
 

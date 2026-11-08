@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # k-icon: pick the kitty app icon (the launcher/dock icon). `k-icon help` lists the commands.
-# The icons come from feelkit/kitty-icons/install-kitty-icons.sh (./install.sh kitty-icons).
+# The icons come from feelkit/kitty-icons/install-kitty-icons.sh (fk install kitty-icons).
 set -uo pipefail
 SELF="$(readlink -f "${BASH_SOURCE[0]}")"
 # shellcheck source=../../lib/ui.sh
@@ -12,7 +12,7 @@ ICON_DIR="$HOME/.local/share/icons/kitty-custom"
 DESKTOP="$HOME/.local/share/applications/kitty.desktop"
 
 need_setup() {
-  [[ -f "$DESKTOP" && -d "$ICON_DIR" ]] || die "kitty icons aren't set up · run: ./install.sh kitty-icons"
+  [[ -f "$DESKTOP" && -d "$ICON_DIR" ]] || die "kitty icons aren't set up · run: fk install kitty-icons"
 }
 names() { find "$ICON_DIR" -maxdepth 1 -type f -name '*.png' -printf '%f\n' 2>/dev/null | sed 's/\.png$//' | sort; }
 current() { basename "$(grep -m1 '^Icon=' "$DESKTOP" | cut -d= -f2-)" .png; }
@@ -54,7 +54,7 @@ k-icon ls	every icon
 k-icon current	the icon in use, name only
 k-icon help	this page
 
-Icons live in ~/.local/share/icons/kitty-custom (./install.sh kitty-icons).
+Icons live in ~/.local/share/icons/kitty-custom (fk install kitty-icons).
 EOF
 }
 

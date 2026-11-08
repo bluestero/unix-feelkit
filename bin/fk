@@ -37,10 +37,10 @@ cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension'
   if [[ -n $want ]]; then   # no list to stay in: the small box
     row=$(looks_row "$want") || ui_unknown fk "$want" extension
     IFS='|' read -r id nice uuid path file ign name <<<"$row"
-    gx_present "$uuid" && gx_enabled "$uuid" || die "$nice isn't installed and enabled · see: ./install.sh ls"
+    gx_present "$uuid" && gx_enabled "$uuid" || die "$nice isn't installed and enabled · see: fk install ls"
     look_menu "$path" "$file" "$name" "$nice" "$ign"; return
   fi
-  [[ -n $(looks_rows) ]] || die "no feelkit extension to adjust · see: ./install.sh ls"
+  [[ -n $(looks_rows) ]] || die "no feelkit extension to adjust · see: fk install ls"
   if ! ui_fzf_at_least 0.63; then die "the list needs fzf 0.63 or newer · or: fk looks <extension>"; fi
   # One list that stays open: enter on an extension shows its choices in the same list
   # (the reset question in its header); results go in the footer (lib/inplace.sh).
@@ -108,11 +108,15 @@ looks_key() {   # key row-label row-id query
 }
 
 case "${1:-help}" in
+  install)   shift; exec "$repo/install.sh" --layer=feelkit "$@" ;;
+  uninstall) shift; exec "$repo/uninstall.sh" --layer=feelkit "$@" ;;
   looks) shift; cmd_looks "$@" ;;
   __key) [[ -z ${NO_COLOR:-} ]] && ui_color; looks_key "${2:-}" "${3:-}" "${4:-}" "${5:-}" ;;
   doctor) exec bash "$(dirname "$SELF")/../gnome/dash2dock/check-patch.sh" "${@:2}" ;;
   help|-h|--help) ui_help fk "feelkit: the appearance parts" <<'HELP'
 ## Commands
+fk install [part...]	set up feelkit's parts: a tab per group, then one question per change	e.g. fk install kitty-theme · fk install ls lists them
+fk uninstall [part...]	remove them, putting your own settings back
 fk looks [extension]	re-apply an extension's look, reset it, put your old settings back or undo the last change	Extensions: vitals, blur-my-shell, rounded-corners, dash-to-panel
 fk doctor [dir|zip]	try our Dash2Dock patch against the newest release (or a folder/zip), hunk by hunk
 fk help	this page

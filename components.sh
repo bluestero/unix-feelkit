@@ -5,14 +5,21 @@
 fk="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 COMPONENTS+=(kitty-bg kitty-theme kitty-accents kitty-icons kitty-centered dash2dock dash-to-panel no-animations vitals vitals-icons blur-my-shell rounded-corners)
-# Their place in the checklist (a layer names its own groups), what each needs from the
-# machine, and which ones have a settings menu (install.sh <id> on an installed one).
-group_kitty_bg() { echo Kitty; }; group_kitty_theme() { echo Kitty; }; group_kitty_accents() { echo Kitty; }
-group_kitty_icons() { echo Kitty; }; group_kitty_centered() { echo Kitty; }
-group_dash2dock() { echo "Desktop (GNOME)"; }; group_dash_to_panel() { echo "Desktop (GNOME)"; }
-group_no_animations() { echo "Desktop (GNOME)"; }; group_vitals() { echo "Desktop (GNOME)"; }
-group_vitals_icons() { echo "Desktop (GNOME)"; }; group_blur_my_shell() { echo "Desktop (GNOME)"; }
-group_rounded_corners() { echo "Desktop (GNOME)"; }
+# feelkit is set up on its own (the file "standalone"): fk install / fk uninstall, never in
+# tk install. Its tabs (a layer names its own groups), what each needs from the machine, and
+# which ones have a settings menu (fk install <id> on an installed one).
+group_kitty_bg() { echo "Kitty looks"; }; group_kitty_theme() { echo "Kitty looks"; }; group_kitty_accents() { echo "Kitty looks"; }
+group_kitty_icons() { echo "Kitty looks"; }; group_kitty_centered() { echo "Kitty looks"; }
+group_dash2dock() { echo "GNOME looks"; }; group_dash_to_panel() { echo "GNOME looks"; }
+group_no_animations() { echo "GNOME looks"; }; group_vitals() { echo "GNOME looks"; }
+group_vitals_icons() { echo "GNOME looks"; }; group_blur_my_shell() { echo "GNOME looks"; }
+group_rounded_corners() { echo "GNOME looks"; }
+GROUP_ABOUT["Kitty looks"]="How kitty looks: background images, colour themes, accents from the background, app icons, centred windows."
+GROUP_ABOUT["GNOME looks"]="How GNOME looks: one bar or a dock, Vitals in the top bar, blur, rounded corners, no animations."
+# Dash2Dock and Dash to Panel both sit on the bottom edge: the dock starts unticked when the
+# panel is in, and with both ticked the summary asks once.
+off_dash2dock() { d2d_other_bar; }
+CLASHES+=("dash2dock dash-to-panel|Both bars use the same space. Keep both?")
 requires_kitty_bg() { echo apt; }; requires_kitty_icons() { echo apt; }
 requires_kitty_centered() { echo gnome; }; requires_dash2dock() { echo gnome; }
 requires_dash_to_panel() { echo gnome; }; requires_no_animations() { echo gnome; }
