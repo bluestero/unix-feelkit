@@ -53,6 +53,7 @@ cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension'
   for k in enter esc y n; do binds+=(--bind "$k:transform:$cb $k {1} {2} {q}"); done
   ui_fzf looks --toast --with-shell='bash -c' --delimiter="$S" --with-nth=1 --prompt='  ' --footer=' ' \
     --header='enter: choose · esc: close' "${binds[@]}" <"$IP/rows.list" >/dev/null
+  return 0   # esc is the way out (fzf's 130), not an error: okcli, kx and ws exit 0 too
 }
 
 # Back to the extensions: rows, header, a result in the footer.
