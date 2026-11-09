@@ -13,34 +13,76 @@ mode=ask details=0
 . "$repo/lib/inplace.sh"
 ask() { confirm "$@"; }   # a picker, not a typed y/N (lib/ui.sh)
 
-# id|name shown|uuid|dconf path|preset|ignore regex|name the originals are kept under
+# id|name shown|uuid|dconf path|preset|name the originals are kept under|ignore regex
+# (the regex last: it can hold |, and read gives the last name the rest of the line)
 looks_table() {
   printf '%s\n' \
-    "vitals|Vitals|$vt_uuid|$vt_path|$vt_file||$vt_uuid" \
-    "blur-my-shell|Blur my Shell|$bm_uuid|$bm_path|$bm_file||$bm_uuid" \
-    "rounded-corners|Rounded Window Corners|$rc_uuid|$rc_path|$rc_file||$rc_uuid" \
-    "dash-to-panel|Dash to Panel|$dtp_uuid|$dtp_path|$dtp_src/settings.dconf|$dtp_ignore|dash-to-panel"
+    "vitals|Vitals|$vt_uuid|$vt_path|$vt_file|$vt_uuid|" \
+    "blur-my-shell|Blur my Shell|$bm_uuid|$bm_path|$bm_file|$bm_uuid|" \
+    "rounded-corners|Rounded Window Corners|$rc_uuid|$rc_path|$rc_file|$rc_uuid|" \
+    "dash-to-panel|Dash to Panel|$dtp_uuid|$dtp_path|$dtp_src/settings.dconf|dash-to-panel|$dtp_ignore"
 }
 
-# The extensions that are installed and enabled, as rows: name shown, id.
-looks_rows() {
-  local id nice uuid path file ign name S=$'\x1f'
-  while IFS='|' read -r id nice uuid path file ign name; do
-    gx_present "$uuid" && gx_enabled "$uuid" || continue
-    printf '%s%s%s\n' "$nice" "$S" "$id"
+# What each extension does (the list's last column).
+looks_about() {
+  case $1 in
+    vitals)          echo "CPU, memory and network readings in the top bar" ;;
+    blur-my-shell)   echo "blurs the top bar, the overview and the dock" ;;
+    rounded-corners) echo "rounded corners on every window" ;;
+    dash-to-panel)   echo "a taskbar in place of the top bar and the dock" ;;
+  esac
+}
+# What each choice does (the choices' second column).
+looks_note() {
+  case $1 in
+    "$LOOK_KEEP") echo "nothing changes" ;;
+    "$LOOK_APP")  echo "feelkit's preset for these settings" ;;
+    "$LOOK_RST")  echo "asks first; undo brings them back" ;;
+    "$LOOK_PRE")  echo "what you had before feelkit set them" ;;
+    "$LOOK_UND")  echo "one step back" ;;
+  esac
+}
+
+# The extensions that are installed and enabled, one id per line.
+looks_ids() {
+  local id nice uuid path file name ign
+  while IFS='|' read -r id nice uuid path file name ign; do
+    gx_present "$uuid" && gx_enabled "$uuid" && echo "$id"
   done < <(looks_table)
 }
 looks_row() { looks_table | grep "^$1|"; }   # the table row of an id
 
+# The list as shown: a title row, then name · look · what it does, the id after a TAB.
+looks_rows() {
+  local id nice uuid path file name ign look S=$'\x1f'
+  {
+    printf 'EXTENSION%sLOOK%sWHAT IT DOES\n' "$S" "$S"
+    for id in $(looks_ids); do
+      IFS='|' read -r id nice uuid path file name ign <<<"$(looks_row "$id")"
+      if look_applied "$path" "$file" "$ign"; then look="${C_GREEN}✓${C_RESET} toolkit look"; else look="your own settings"; fi
+      printf '%s\t%s\n' "$nice$S$look$S$(looks_about "$id")" "$id"
+    done
+  } | print_table 3 "$(ui_pick_width)"
+}
+# An extension's choices as shown: a title row, then choice · what it does, the choice after a TAB.
+looks_menu_rows() {   # name
+  local c S=$'\x1f'
+  { printf 'CHOICE%sWHAT IT DOES\n' "$S"
+    look_choices "$1" | while IFS= read -r c; do printf '%s\t%s\n' "$c$S$(looks_note "$c")" "$c"; done
+  } | print_table 3 "$(ui_pick_width)"
+}
+LOOKS_KEYS="# Pick an extension, then what to do with its settings
+enter: choose · esc: close"
+
 cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension's settings
-  local want=${1:-} row id nice uuid path file ign name S=$'\x1f'
+  local want=${1:-} row id nice uuid path file ign name
   if [[ -n $want ]]; then   # no list to stay in: the small box
     row=$(looks_row "$want") || ui_unknown fk "$want" extension
-    IFS='|' read -r id nice uuid path file ign name <<<"$row"
+    IFS='|' read -r id nice uuid path file name ign <<<"$row"
     gx_present "$uuid" && gx_enabled "$uuid" || die "$nice isn't installed and enabled · see: fk install ls"
     look_menu "$path" "$file" "$name" "$nice" "$ign"; return
   fi
-  [[ -n $(looks_rows) ]] || die "no feelkit extension to adjust · see: fk install ls"
+  [[ -n $(looks_ids) ]] || die "no feelkit extension to adjust · see: fk install ls"
   if ! ui_fzf_at_least 0.63; then die "the list needs fzf 0.63 or newer · or: fk looks <extension>"; fi
   # One list that stays open: enter on an extension shows its choices in the same list
   # (the reset question in its header); results go in the footer (lib/inplace.sh).
@@ -50,17 +92,18 @@ cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension'
   looks_rows >"$IP/rows.list"
   local cb k; cb="$(printf %q "$SELF") __key"
   local -a binds=(--bind "start:unbind(y,n)")
-  for k in enter esc y n; do binds+=(--bind "$k:transform:$cb $k {1} {2} {q}"); done
-  ui_fzf looks --toast --with-shell='bash -c' --delimiter="$S" --with-nth=1 --prompt='  ' --footer=' ' \
-    --header='enter: choose · esc: close' "${binds[@]}" <"$IP/rows.list" >/dev/null
+  for k in enter esc y n; do binds+=(--bind "$k:transform:$cb $k {2} {q}"); done
+  ui_fzf 'fk · looks' --toast --with-shell='bash -c' --delimiter='\t' --with-nth=1 --header-lines=1 \
+    --prompt='extension> ' --footer=' ' --header="$LOOKS_KEYS" "${binds[@]}" <"$IP/rows.list" >/dev/null
   return 0   # esc is the way out (fzf's 130), not an error: okcli, kx and ws exit 0 too
 }
 
 # Back to the extensions: rows, header, a result in the footer.
 looks_to_list() {   # [toast]
-  local n; n=$(awk -F"$(printf '\x1f')" -v id="$(ip_get cur)" '$2 == id { print NR; exit }' "$IP/rows.list")
+  [[ -n ${1:-} ]] && looks_rows >"$IP/rows.list"   # something was done: its look may have changed
+  local n; n=$(awk -F'\t' -v id="$(ip_get cur)" '$2 == id { print NR - 1; exit }' "$IP/rows.list")
   local -a a=("$(ip_back)" "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.list")")" "pos(${n:-1})"
-    "$(ip_fz change-header "$(ui_keys "enter: choose · esc: close")")" "$(ip_fz change-prompt '  ')")
+    "$(ip_fz change-header "$(ui_keys "$LOOKS_KEYS")")" "$(ip_fz change-prompt 'extension> ')")
   if [[ -n ${1:-} ]]; then a+=("$(ui_toast "$1")"); else a+=("$(ip_fz change-footer " ")"); fi
   ip_join "${a[@]}"
 }
@@ -71,8 +114,8 @@ looks_toast() {   # look_do's output (✓ ... / – ...) as one footer line
 }
 
 # The list's keys (a callback has no terminal): prints fzf actions.
-looks_key() {   # key row-label row-id query
-  local k=$1 label=$2 id=$3 q=$4 m row nice uuid path file ign name out state
+looks_key() {   # key value query (value: the id in the list, the choice in the menu)
+  local k=$1 id=$2 label=$2 q=$3 m row nice uuid path file ign name out state
   m=$(ip_get mode)
   case $m in
     list)
@@ -80,16 +123,16 @@ looks_key() {   # key row-label row-id query
         esc) echo abort ;;
         enter)
           [[ -n $id ]] || return 0
-          row=$(looks_row "$id") && IFS='|' read -r id nice uuid path file ign name <<<"$row" || return 0
+          row=$(looks_row "$id") && IFS='|' read -r id nice uuid path file name ign <<<"$row" || return 0
           ip_set saved_q "$q"; ip_set mode menu; ip_set cur "$id"
-          look_choices "$name" >"$IP/rows.menu"
-          if look_applied "$path" "$file" "$ign"; then state="match the toolkit look"; else state="differ from the toolkit look"; fi
+          looks_menu_rows "$name" >"$IP/rows.menu"
+          if look_applied "$path" "$file" "$ign"; then state="match the toolkit look"; else state="are your own (not the toolkit look)"; fi
           ip_join "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.menu")")" first "$(ip_fz change-query "")" disable-search \
-            "$(ip_fz change-header "$(ui_keys "$nice settings $state"$'\n'"enter: do it · esc: back")")" \
-            "$(ip_fz change-prompt '  ')" "$(ip_fz change-footer " ")" ;;
+            "$(ip_fz change-header "$(ui_keys "# $nice: its settings $state"$'\n'"enter: do it · esc: back")")" \
+            "$(ip_fz change-prompt "$nice> ")" "$(ip_fz change-footer " ")" ;;
       esac ;;
     menu)
-      IFS='|' read -r id nice uuid path file ign name <<<"$(looks_row "$(ip_get cur)")"
+      IFS='|' read -r id nice uuid path file name ign <<<"$(looks_row "$(ip_get cur)")"
       case $k in
         esc) looks_to_list ;;
         enter)
@@ -101,7 +144,7 @@ looks_key() {   # key row-label row-id query
       esac ;;
     confirm)
       local a; a=$(ip_answer "$k"); [[ -n $a ]] || return 0
-      IFS='|' read -r id nice uuid path file ign name <<<"$(looks_row "$(ip_get cur)")"
+      IFS='|' read -r id nice uuid path file name ign <<<"$(looks_row "$(ip_get cur)")"
       if [[ $a == yes ]]; then out=$(look_do "$path" "$file" "$name" "$nice" "$LOOK_RST" 2>&1); looks_to_list "$(looks_toast "$out")"
       else looks_to_list "Nothing changed"; fi ;;
   esac
@@ -111,7 +154,7 @@ case "${1:-help}" in
   install)   shift; exec "$repo/install.sh" --layer=feelkit "$@" ;;
   uninstall) shift; exec "$repo/uninstall.sh" --layer=feelkit "$@" ;;
   looks) shift; cmd_looks "$@" ;;
-  __key) [[ -z ${NO_COLOR:-} ]] && ui_color; looks_key "${2:-}" "${3:-}" "${4:-}" "${5:-}" ;;
+  __key) [[ -z ${NO_COLOR:-} ]] && ui_color; looks_key "${2:-}" "${3:-}" "${4:-}" ;;
   doctor) exec bash "$(dirname "$SELF")/../gnome/dash2dock/check-patch.sh" "${@:2}" ;;
   help|-h|--help) ui_help fk "feelkit: the appearance parts" <<'HELP'
 ## Commands
