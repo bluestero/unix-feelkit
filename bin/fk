@@ -52,7 +52,7 @@ looks_ids() {
 }
 looks_row() { looks_table | grep "^$1|"; }   # the table row of an id
 
-# The list as shown: a title row, then name · look · what it does, the id after a TAB.
+# The list's cells (laid out by looks_lay): a title row, then name · look · what it does, the id after a TAB.
 looks_rows() {
   local id nice uuid path file name ign look S=$'\x1f'
   {
@@ -62,15 +62,16 @@ looks_rows() {
       if look_applied "$path" "$file" "$ign"; then look="${C_GREEN}✓${C_RESET} toolkit look"; else look="your own settings"; fi
       printf '%s\t%s\n' "$nice$S$look$S$(looks_about "$id")" "$id"
     done
-  } | print_table 3 "$(ui_pick_width)"
+  }
 }
-# An extension's choices as shown: a title row, then choice · what it does, the choice after a TAB.
+# An extension's choices' cells: a title row, then choice · what it does, the choice after a TAB.
 looks_menu_rows() {   # name
   local c S=$'\x1f'
-  { printf 'CHOICE%sWHAT IT DOES\n' "$S"
-    look_choices "$1" | while IFS= read -r c; do printf '%s\t%s\n' "$c$S$(looks_note "$c")" "$c"; done
-  } | print_table 3 "$(ui_pick_width)"
+  printf 'CHOICE%sWHAT IT DOES\n' "$S"
+  look_choices "$1" | while IFS= read -r c; do printf '%s\t%s\n' "$c$S$(looks_note "$c")" "$c"; done
 }
+# Lay out the kept cells (list or menu) for the width fzf has now: rows.<which>.
+looks_lay() { print_table 3 "$(ui_pick_width)" <"$IP/cells.$1" >"$IP/rows.$1"; }
 LOOKS_KEYS="# Pick an extension, then what to do with its settings
 enter: choose · esc: close"
 
@@ -89,10 +90,10 @@ cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension'
   IP=$(mktemp -d) || return 1; export IP
   trap 'rm -rf "$IP"' EXIT
   ip_set mode list
-  looks_rows >"$IP/rows.list"
+  looks_rows >"$IP/cells.list"; looks_lay list
   local cb k; cb="$(printf %q "$SELF") __key"
   local -a binds=(--bind "start:unbind(y,n)")
-  for k in enter esc y n; do binds+=(--bind "$k:transform:$cb $k {2} {q}"); done
+  for k in enter esc y n resize; do binds+=(--bind "$k:transform:$cb $k {2} {q}"); done
   ui_fzf 'fk · looks' --toast --with-shell='bash -c' --delimiter='\t' --with-nth=1 --header-lines=1 \
     --prompt='extension> ' --footer=' ' --header="$LOOKS_KEYS" "${binds[@]}" <"$IP/rows.list" >/dev/null
   return 0   # esc is the way out (fzf's 130), not an error: okcli, kx and ws exit 0 too
@@ -100,7 +101,8 @@ cmd_looks() {   # fk looks [id]: re-apply, reset, put back or undo an extension'
 
 # Back to the extensions: rows, header, a result in the footer.
 looks_to_list() {   # [toast]
-  [[ -n ${1:-} ]] && looks_rows >"$IP/rows.list"   # something was done: its look may have changed
+  [[ -n ${1:-} ]] && looks_rows >"$IP/cells.list"   # something was done: its look may have changed
+  looks_lay list   # (the window may have been resized meanwhile)
   local n; n=$(awk -F'\t' -v id="$(ip_get cur)" '$2 == id { print NR - 1; exit }' "$IP/rows.list")
   local -a a=("$(ip_back)" "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.list")")" "pos(${n:-1})"
     "$(ip_fz change-header "$(ui_keys "$LOOKS_KEYS")")" "$(ip_fz change-prompt 'extension> ')")
@@ -117,6 +119,10 @@ looks_toast() {   # look_do's output (✓ ... / – ...) as one footer line
 looks_key() {   # key value query (value: the id in the list, the choice in the menu)
   local k=$1 id=$2 label=$2 q=$3 m row nice uuid path file ign name out state
   m=$(ip_get mode)
+  if [[ $k == resize ]]; then   # the table again for the new width, the cursor on the same row
+    local w=list; [[ $m == list ]] || w=menu
+    looks_lay "$w"; ip_join "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.$w")")" "pos(${FZF_POS:-1})"; return
+  fi
   case $m in
     list)
       case $k in
@@ -125,7 +131,7 @@ looks_key() {   # key value query (value: the id in the list, the choice in the 
           [[ -n $id ]] || return 0
           row=$(looks_row "$id") && IFS='|' read -r id nice uuid path file name ign <<<"$row" || return 0
           ip_set saved_q "$q"; ip_set mode menu; ip_set cur "$id"
-          looks_menu_rows "$name" >"$IP/rows.menu"
+          looks_menu_rows "$name" >"$IP/cells.menu"; looks_lay menu
           if look_applied "$path" "$file" "$ign"; then state="match the toolkit look"; else state="are your own (not the toolkit look)"; fi
           ip_join "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.menu")")" first "$(ip_fz change-query "")" disable-search \
             "$(ip_fz change-header "$(ui_keys "# $nice: its settings $state"$'\n'"enter: do it · esc: back")")" \
