@@ -40,6 +40,8 @@ looks_note() {
     "$LOOK_RST")  echo "asks first; undo brings them back" ;;
     "$LOOK_PRE")  echo "what you had before feelkit set them" ;;
     "$LOOK_UND")  echo "one step back" ;;
+    "$LOOK_KPT")  echo "what you changed goes in your patch (~/.config/work-toolkit/patches), loaded after the look" ;;
+    "$LOOK_DRP")  echo "back to the plain look (your patch is kept as <name>.dropped)" ;;
   esac
 }
 
@@ -59,16 +61,17 @@ looks_rows() {
     printf 'EXTENSION%sLOOK%sWHAT IT DOES\n' "$S" "$S"
     for id in $(looks_ids); do
       IFS='|' read -r id nice uuid path file name ign <<<"$(looks_row "$id")"
-      if look_applied "$path" "$file" "$ign"; then look="${C_GREEN}✓${C_RESET} toolkit look"; else look="your own settings"; fi
+      if look_applied "$path" "$file" "$ign" "$name"; then look="${C_GREEN}✓${C_RESET} toolkit look"; [[ -f $(look_patch "$name") ]] && look+=" + my patch"
+      else look="your own settings"; fi
       printf '%s\t%s\n' "$nice$S$look$S$(looks_about "$id")" "$id"
     done
   }
 }
 # An extension's choices' cells: a title row, then choice · what it does, the choice after a TAB.
-looks_menu_rows() {   # name
+looks_menu_rows() {   # name [differs]
   local c S=$'\x1f'
   printf 'CHOICE%sWHAT IT DOES\n' "$S"
-  look_choices "$1" | while IFS= read -r c; do printf '%s\t%s\n' "$c$S$(looks_note "$c")" "$c"; done
+  look_choices "$1" "${2:-}" | while IFS= read -r c; do printf '%s\t%s\n' "$c$S$(looks_note "$c")" "$c"; done
 }
 # Lay out the kept cells (list or menu) for the width fzf has now: rows.<which>.
 looks_lay() { print_table 3 "$(ui_pick_width)" <"$IP/cells.$1" >"$IP/rows.$1"; }
@@ -131,8 +134,10 @@ looks_key() {   # key value query (value: the id in the list, the choice in the 
           [[ -n $id ]] || return 0
           row=$(looks_row "$id") && IFS='|' read -r id nice uuid path file name ign <<<"$row" || return 0
           ip_set saved_q "$q"; ip_set mode menu; ip_set cur "$id"
-          looks_menu_rows "$name" >"$IP/cells.menu"; looks_lay menu
-          if look_applied "$path" "$file" "$ign"; then state="match the toolkit look"; else state="are your own (not the toolkit look)"; fi
+          local differs=""
+          if look_applied "$path" "$file" "$ign" "$name"; then state="match the toolkit look"; else state="are your own (not the toolkit look)"; differs=1; fi
+          [[ -f $(look_patch "$name") ]] && state+=", with your patch"
+          looks_menu_rows "$name" "$differs" >"$IP/cells.menu"; looks_lay menu
           ip_join "$(ip_fz reload-sync "cat $(printf %q "$IP/rows.menu")")" first "$(ip_fz change-query "")" disable-search \
             "$(ip_fz change-header "$(ui_keys "# $nice: its settings $state"$'\n'"enter: do it · esc: back")")" \
             "$(ip_fz change-prompt "$nice> ")" "$(ip_fz change-footer " ")" ;;
@@ -146,12 +151,12 @@ looks_key() {   # key value query (value: the id in the list, the choice in the 
           if [[ $label == "$LOOK_RST" ]]; then
             ip_confirm "Reset $nice to the app's defaults? (the menu can undo it)" reset n; return
           fi
-          out=$(look_do "$path" "$file" "$name" "$nice" "$label" 2>&1); looks_to_list "$(looks_toast "$out")" ;;
+          out=$(look_do "$path" "$file" "$name" "$nice" "$label" "$ign" 2>&1); looks_to_list "$(looks_toast "$out")" ;;
       esac ;;
     confirm)
       local a; a=$(ip_answer "$k"); [[ -n $a ]] || return 0
       IFS='|' read -r id nice uuid path file name ign <<<"$(looks_row "$(ip_get cur)")"
-      if [[ $a == yes ]]; then out=$(look_do "$path" "$file" "$name" "$nice" "$LOOK_RST" 2>&1); looks_to_list "$(looks_toast "$out")"
+      if [[ $a == yes ]]; then out=$(look_do "$path" "$file" "$name" "$nice" "$LOOK_RST" "$ign" 2>&1); looks_to_list "$(looks_toast "$out")"
       else looks_to_list "Nothing changed"; fi ;;
   esac
 }
@@ -166,7 +171,7 @@ case "${1:-help}" in
 ## Commands
 fk install [part...]	set up feelkit's parts: a tab per group, then one question per change	e.g. fk install kitty-theme · fk install ls lists them
 fk uninstall [part...]	remove them, putting your own settings back
-fk looks [extension]	re-apply an extension's look, reset it, put your old settings back or undo the last change	Extensions: vitals, blur-my-shell, rounded-corners, dash-to-panel
+fk looks [extension]	re-apply an extension's look, reset it, put your old settings back, undo the last change, or keep what you changed as your patch (~/.config/work-toolkit/patches, loaded after the look)	Extensions: vitals, blur-my-shell, rounded-corners, dash-to-panel
 fk doctor [dir|zip]	try our Dash2Dock patch against the newest release (or a folder/zip), hunk by hunk
 fk help	this page
 HELP

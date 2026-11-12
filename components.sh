@@ -351,7 +351,7 @@ detail_dash_to_panel() { echo "GNOME extension $dtp_uuid from extensions.gnome.o
 state_dash_to_panel() { NOTE=""
   type -P gnome-shell >/dev/null || { STATE=unsupported; NOTE="needs GNOME"; return; }
   if dtp_present && dtp_enabled; then
-    if look_applied "$dtp_path" "$dtp_src/settings.dconf" "$dtp_ignore"; then STATE=installed
+    if look_applied "$dtp_path" "$dtp_src/settings.dconf" "$dtp_ignore" dash-to-panel; then STATE=installed
     else STATE=partial; NOTE="settings differ from the toolkit's look"; fi
   elif dtp_present || dtp_enabled; then STATE=partial
   else STATE=missing; fi; }

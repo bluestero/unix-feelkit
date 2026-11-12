@@ -264,9 +264,11 @@ share_accents() {
 # STARSHIP_CONFIG here). The directory and ❯ take the accent, the git branch the
 # second one; red prod warnings and errors stay red. Accents off = plain copy.
 sync_prompt() {
-  local src=${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml
-  [[ -r "$src" ]] || return 0
+  local src=$HOME/.local/state/work-toolkit/starship.toml   # the toolkit's merge with your patch, if any
+  [[ -f $src ]] || src=${XDG_CONFIG_HOME:-$HOME/.config}/starship.toml
   mkdir -p "$theme_dir"
+  # no starship.toml (tk configs: the app's default): an empty copy, so starship uses its own
+  [[ -r "$src" ]] || { : >"$theme_dir/starship.toml"; return 0; }
   python3 -I - "$src" "$theme_dir/accent" "$theme_dir/starship.toml" <<'PY' || true
 import os, re, sys, tomllib
 src, accent_file, out = sys.argv[1:]
