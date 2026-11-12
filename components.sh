@@ -25,6 +25,7 @@ requires_dash_to_panel() { echo gnome; }; requires_no_animations() { echo gnome;
 requires_vitals() { echo gnome; }; requires_vitals_icons() { echo gnome; }
 requires_blur_my_shell() { echo gnome; }; requires_rounded_corners() { echo gnome; }
 LOOK_PARTS+=(dash-to-panel vitals blur-my-shell rounded-corners)
+NEEDS+=([kitty-bg]=kitty-config [kitty-theme]=kitty-config [kitty-accents]=kitty-config [kitty-icons]=kitty [vitals-icons]=vitals)
 feelkit_wants_launcher_entry() { d2d_present || d2d_other_bar; }
 
 # ------------------------------------------------------------ kitty-bg ---
@@ -36,10 +37,10 @@ label_kitty_bg() { echo "Kitty backgrounds"; }
 title_kitty_bg() { echo "Background images with live preview, brightness and opacity (k-bg)"; }
 detail_kitty_bg() { echo "imagemagick (apt) to resize images, fzf for the picker; your pick in ~/.config/kitty/background.conf"; }
 state_kitty_bg() { NOTE=""
-  command -v kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
+  type -P kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
   linked "$kc" "$kc_src" || { STATE=n/a; NOTE="needs kitty-config first"; return; }
   local missing; missing=$(missing_pkgs "${kbg_pkgs[@]}")
-  command -v fzf >/dev/null || missing+="fzf "
+  type -P fzf >/dev/null || missing+="fzf "
   if [[ -z "$missing" && -f "$kbg_conf" ]]; then STATE=installed; NOTE="$("$kbg" current 2>/dev/null)"
   elif [[ -n "$missing" && ! -f "$kbg_conf" ]]; then STATE=missing
   else STATE=partial; NOTE="${missing:+needs: $missing}"; [[ -f "$kbg_conf" ]] || NOTE="no background picked yet"; fi; }
@@ -51,7 +52,7 @@ install_kitty_bg() {
       dry || apt_install "${kbg_pkgs[@]}" && ok "installed" || { fail "apt failed (see $log_file)"; return 1; }
     else skip; return 0; fi
   fi
-  command -v fzf >/dev/null || install_fzf
+  type -P fzf >/dev/null || install_fzf
   [[ -f "$kbg_conf" ]] && { ok "background: $("$kbg" current 2>/dev/null) ${D}(k-bg to change)${R}"; return; }
   dry && { say "      ${D}would open the k-bg picker${R}"; return; }
   if [[ $mode == ask && -t 1 ]] && ask "Pick a background now? (↑/↓ previews it live; esc = none for now)"; then
@@ -79,7 +80,7 @@ label_kitty_theme() { echo "Kitty themes"; }
 title_kitty_theme() { echo "Colour themes with live preview, yours plus kitty's 400+ (k-theme)"; }
 detail_kitty_theme() { echo "kitty's theme collection into ${kth_data/#$HOME/\~} (about 0.6 MB); fzf $FZF_MIN+ for the picker; your list in ~/.config/k-theme/mine"; }
 state_kitty_theme() { NOTE=""
-  command -v kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
+  type -P kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
   linked "$kc" "$kc_src" || { STATE=n/a; NOTE="needs kitty-config first"; return; }
   local n=0
   local v; v=$(fzf_ver)
@@ -119,7 +120,7 @@ label_kitty_accents() { echo "Kitty accents"; }
 title_kitty_accents() { echo "Prompt, pickers, cursor and selection take a colour from the background"; }
 detail_kitty_accents() { echo "k-bg accents on: colour lines in ~/.config/kitty/background.conf (terminal colours unchanged)"; }
 state_kitty_accents() { NOTE=""
-  command -v kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
+  type -P kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
   linked "$kc" "$kc_src" || { STATE=n/a; NOTE="needs kitty-config first"; return; }
   if [[ "$("$kbg" __accents_state 2>/dev/null)" == on ]]; then STATE=installed; else STATE=missing; fi; }
 install_kitty_accents() {
@@ -158,8 +159,8 @@ label_kitty_centered() { echo "Centered windows"; }
 title_kitty_centered() { echo "Open new windows (kitty included) in the middle of the screen"; }
 detail_kitty_centered() { echo "GNOME setting $ctr_schema $ctr_key = true (your old value is kept for the uninstall)"; }
 state_kitty_centered() { NOTE=""
-  command -v gsettings >/dev/null && gsettings list-keys "$ctr_schema" 2>/dev/null | grep -qx "$ctr_key" ||
-    { STATE=n/a; NOTE="needs GNOME"; return; }
+  type -P gsettings >/dev/null && gsettings list-keys "$ctr_schema" 2>/dev/null | grep -qx "$ctr_key" ||
+    { STATE=unsupported; NOTE="needs GNOME"; return; }
   if [[ "$(gsettings get "$ctr_schema" "$ctr_key")" == true ]]; then STATE=installed; else STATE=missing; fi; }
 install_kitty_centered() {
   [[ "$(gsettings get "$ctr_schema" "$ctr_key")" == true ]] && { ok "already on"; return; }
@@ -181,8 +182,8 @@ label_no_animations() { echo "No window animations"; }
 title_no_animations() { echo "Turn off GNOME's window animations (browsers then drop CSS animations too: reduced motion)"; }
 detail_no_animations() { echo "GNOME setting $anim_schema $anim_key = false (your old value is kept for the uninstall)"; }
 state_no_animations() { NOTE=""
-  command -v gsettings >/dev/null && gsettings list-keys "$anim_schema" 2>/dev/null | grep -qx "$anim_key" ||
-    { STATE=n/a; NOTE="needs GNOME"; return; }
+  type -P gsettings >/dev/null && gsettings list-keys "$anim_schema" 2>/dev/null | grep -qx "$anim_key" ||
+    { STATE=unsupported; NOTE="needs GNOME"; return; }
   if [[ "$(gsettings get "$anim_schema" "$anim_key")" == false ]]; then STATE=installed; else STATE=missing; fi; }
 install_no_animations() {
   [[ "$(gsettings get "$anim_schema" "$anim_key")" == false ]] && { ok "already off"; return; }
@@ -286,14 +287,14 @@ label_dash2dock() { echo "Dash2Dock dock"; }
 title_dash2dock() { echo "macOS-style dock with window previews on click (replaces Ubuntu's dock; log out once)"; }
 detail_dash2dock() { echo "GNOME extension $d2d_uuid from extensions.gnome.org + feelkit/gnome/dash2dock patches and preset look; turns Ubuntu's dock off (put back by the uninstall)"; }
 state_dash2dock() { NOTE=""
-  command -v gnome-shell >/dev/null || { STATE=n/a; NOTE="needs GNOME"; return; }
+  type -P gnome-shell >/dev/null || { STATE=unsupported; NOTE="needs GNOME"; return; }
   if d2d_present && d2d_patched && d2d_enabled; then STATE=installed
   elif d2d_present || d2d_enabled; then STATE=partial
   else STATE=missing; fi; }
 install_dash2dock() {
   if d2d_present && d2d_patched && d2d_enabled; then ok "already installed"; return; fi
   ask "Install the Dash2Dock dock (replaces Ubuntu's dock)?" n || { skip; return; }
-  command -v patch >/dev/null || { fail "the 'patch' tool is missing (sudo apt install patch)"; return 1; }
+  type -P patch >/dev/null || { fail "the 'patch' tool is missing (sudo apt install patch)"; return 1; }
   d2d_present || ext_download "$d2d_uuid" Dash2Dock || return 1
   if d2d_patched; then ok "patches already in"
   elif patch -p1 -N --dry-run -s -d "$d2d_dir" <"$d2d_src/dash2dock.patch" >>"$log_file" 2>&1; then
@@ -348,7 +349,7 @@ label_dash_to_panel() { echo "One bar (Dash to Panel)"; }
 title_dash_to_panel() { echo "dock and top bar merged into one bar, no Activities button (log out once)"; }
 detail_dash_to_panel() { echo "GNOME extension $dtp_uuid from extensions.gnome.org + preset look feelkit/gnome/dash-to-panel; turns Ubuntu's dock off (put back by the uninstall)"; }
 state_dash_to_panel() { NOTE=""
-  command -v gnome-shell >/dev/null || { STATE=n/a; NOTE="needs GNOME"; return; }
+  type -P gnome-shell >/dev/null || { STATE=unsupported; NOTE="needs GNOME"; return; }
   if dtp_present && dtp_enabled; then
     if look_applied "$dtp_path" "$dtp_src/settings.dconf" "$dtp_ignore"; then STATE=installed
     else STATE=partial; NOTE="settings differ from the toolkit's look"; fi
