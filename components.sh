@@ -146,7 +146,7 @@ state_kitty_icons() { NOTE=""
     { STATE=n/a; NOTE="kitty isn't installed"; return; }
   local n; n=$(find "$icon_dir" -maxdepth 1 -name '*.png' 2>/dev/null | wc -l)
   if (( n >= 3 )) && grep -q "^Icon=$icon_dir/" "$kitty_desktop" 2>/dev/null; then STATE=installed
-  elif (( n )) || [[ -f "$kitty_desktop" ]]; then STATE=partial
+  elif (( n )); then STATE=partial   # (kitty.desktop alone is the kitty part's, not ours)
   else STATE=missing; fi; }
 install_kitty_icons() { ask "Run feelkit/kitty-icons/install-kitty-icons.sh?" && bash "$fk/kitty-icons/install-kitty-icons.sh" || skip; }
 uninstall_kitty_icons() { bash "$fk/kitty-icons/cleanup-kitty-icons.sh"; }
@@ -282,6 +282,8 @@ d2d_dir="$HOME/.local/share/gnome-shell/extensions/$d2d_uuid"; d2d_src="$fk/gnom
 d2d_path=/org/gnome/shell/extensions/dash2dock-lite/
 d2d_present() { [[ -d "$d2d_dir" ]]; }
 d2d_patched() { grep -q "work-toolkit patch" "$d2d_dir/dock.js" 2>/dev/null; }
+# a release our patches don't fit: it runs without them, and asking again changes nothing
+d2d_unfit() { ! patch -p1 -N --dry-run -s -d "$d2d_dir" <"$d2d_src/dash2dock.patch" >/dev/null 2>&1; }
 d2d_enabled() { gsettings get org.gnome.shell enabled-extensions 2>/dev/null | grep -q "'$d2d_uuid'"; }
 label_dash2dock() { echo "Dash2Dock dock"; }
 title_dash2dock() { echo "macOS-style dock with window previews on click (replaces Ubuntu's dock; log out once)"; }
@@ -289,10 +291,11 @@ detail_dash2dock() { echo "GNOME extension $d2d_uuid from extensions.gnome.org +
 state_dash2dock() { NOTE=""
   type -P gnome-shell >/dev/null || { STATE=unsupported; NOTE="needs GNOME"; return; }
   if d2d_present && d2d_patched && d2d_enabled; then STATE=installed
+  elif d2d_present && d2d_enabled && d2d_unfit; then STATE=installed; NOTE="without our patches (they don't fit this release)"
   elif d2d_present || d2d_enabled; then STATE=partial
   else STATE=missing; fi; }
 install_dash2dock() {
-  if d2d_present && d2d_patched && d2d_enabled; then ok "already installed"; return; fi
+  if d2d_present && d2d_enabled && { d2d_patched || d2d_unfit; }; then ok "already installed"; return; fi
   ask "Install the Dash2Dock dock (replaces Ubuntu's dock)?" n || { skip; return; }
   type -P patch >/dev/null || { fail "the 'patch' tool is missing (sudo apt install patch)"; return 1; }
   d2d_present || ext_download "$d2d_uuid" Dash2Dock || return 1

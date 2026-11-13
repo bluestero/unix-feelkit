@@ -34,7 +34,7 @@ fk install kitty-theme   # just that part (fk install ls lists them)
 fk uninstall          # remove parts, your own settings put back
 ```
 
-`tk update` keeps it current (and says when `fk install` has something new), `tk status` and
+`tk update` keeps it current (feelkit has its own tab there: fixes, new parts, clean-ups), `tk status` and
 `tk doctor` show one line on how much of it is set up. Everything asks first.
 
 ## Parts
