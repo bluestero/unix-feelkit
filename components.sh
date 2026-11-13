@@ -116,15 +116,17 @@ uninstall_kitty_theme() {
 
 # ------------------------------------------------------- kitty-accents ---
 kbg="$fk/bin/k-bg"
+# on only in a saved background.conf (k-bg reads a missing one as accents on)
+ka_on() { [[ -f $kbg_conf && "$("$kbg" __accents_state 2>/dev/null)" == on ]]; }
 label_kitty_accents() { echo "Kitty accents"; }
 title_kitty_accents() { echo "Prompt, pickers, cursor and selection take a colour from the background"; }
 detail_kitty_accents() { echo "k-bg accents on: colour lines in ~/.config/kitty/background.conf (terminal colours unchanged)"; }
 state_kitty_accents() { NOTE=""
   type -P kitty >/dev/null || { STATE=n/a; NOTE="kitty isn't installed"; return; }
   linked "$kc" "$kc_src" || { STATE=n/a; NOTE="needs kitty-config first"; return; }
-  if [[ "$("$kbg" __accents_state 2>/dev/null)" == on ]]; then STATE=installed; else STATE=missing; fi; }
+  if ka_on; then STATE=installed; else STATE=missing; fi; }
 install_kitty_accents() {
-  [[ "$("$kbg" __accents_state 2>/dev/null)" == on ]] && { ok "already on"; return; }
+  ka_on && { ok "already on"; return; }
   linked "$kc" "$kc_src" || { skip "needs kitty-config first"; return; }
   if ask "Tint kitty's accents to match each background?"; then
     logf "  $("$kbg" accents on 2>&1)"
@@ -132,7 +134,7 @@ install_kitty_accents() {
   else skip; fi
 }
 uninstall_kitty_accents() {
-  [[ "$("$kbg" __accents_state 2>/dev/null)" == on ]] || { ok "already off"; return; }
+  ka_on || { ok "already off"; return; }   # (no background.conf: nothing to turn off, none made)
   "$kbg" accents off >>"$log_file" 2>&1 && ok "off (kitty's default accent colours)"
 }
 
@@ -384,6 +386,7 @@ uninstall_dash_to_panel() {
     ok "bar removed"
   fi
   look_reset "$dtp_path" dash-to-panel
+  rm -rf "$(look_copy "$dtp_src/settings.dconf")"   # the apps-button icon the look pointed at
   if [[ "$(recall_setting dock-ubuntu)" == on ]] && ! d2d_present; then
     gnome-extensions enable ubuntu-dock@ubuntu.com >/dev/null 2>&1 && ok "Ubuntu's dock back on"
     forget_setting dock-ubuntu
